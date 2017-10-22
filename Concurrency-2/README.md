@@ -1,9 +1,10 @@
 The Dining Philosophers Problem was proposed by Dijkstra in 1965. It appears in a number of variations, but the standard features are a table with five plates, five forks (or chopsticks), and a big bowl of spaghetti. Five philosophers, who represent interacting threads, come to the table and execute the following loop:
-```while True:
-	think()
-	get_forks()
-	eat()
-	put_forks()
+```
+	while True:
+		think()
+		get_forks()
+		eat()
+		put_forks()
 ```
 Assuming that the philosophers know how to think() and eat(), write a solution to this problem
 
