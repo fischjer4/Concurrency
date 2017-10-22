@@ -3,6 +3,16 @@
 #include <time.h>
 
 /*
+	* Defining philosopher Names for output
+*/
+#define PHIL_1 "Aristotle"
+#define PHIL_2 "Plato"
+#define PHIL_3 "Locke"
+#define PHIL_4 "Socrates"
+#define PHIL_5 "Marx"
+
+
+/*
 	* Returns a random integer in the 
 	  inclusive range of [inclus_min, inclus_max]
 */

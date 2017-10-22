@@ -1,12 +1,17 @@
-TARGETS = concurrency
-CC_C = $(CROSS_TOOL)gcc 
-CFLAGS = -Wall -pthread
+OBJS = concurrency.o
+CC = g++
+DEBUG = -g
+CFLAGS = -Wall -c $(DEBUG)
+LFLAGS = -Wall $(DEBUG)
+concurrency : $(OBJS)
+	$(CC) $(LFLAGS) $(OBJS) -o concurrency
 
-all: clean $(TARGETS)
-
-$(TARGETS):
-	$(CC_C) $(CFLAGS) $@.c -o $@
+concurrency.o : concurrency.cpp
+	$(CC) $(CFLAGS) concurrency.cpp
 
 clean:
-	$(RM) concurrency
-	rm -rf concurrency.dSYM
+	\rm *.o *~ concurrency
+
+tar:
+	tar cfv concurrency.tar concurrency.cpp
+	
