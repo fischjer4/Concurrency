@@ -65,6 +65,17 @@ void eating(string name){
 void eating(string name){
 	cout << name << " is thinking " << endl;
 }
+
+void begin(void* philo){
+	struct Philosopher* curPhilo = (struct Philosopher*)philo;
+	curPhilo->action(curPhilo->name);
+	pthread_exit(NULL);
+}
+
+
+/*
+	* Initilizes the five philosophers
+*/
 void initPhils(struct Philosopher allPhilos[]){
 	/* First Philosopher */
 	allPhilos[0].name = PHIL_1;
@@ -96,6 +107,16 @@ int main(int argc, char *argv[]){
 	struct Philosopher allPhilos[5];
 	pthread_t threads[5];
 
+	for(int i = 0 ; i < 5; i++){
+		if(!pthread_create(&threads[i], NULL, begin, (void*) &allPhilos[i])){
+			cout << "Error: " 
+				 << allPhilos[i].name 
+				 << " thread could not be initialised ... exiting now" 
+				 << endl;
+		}
+	}
+	
+	pthread_exit(NULL);	
 
 	return 0;
 }
