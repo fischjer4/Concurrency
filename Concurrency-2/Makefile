@@ -7,11 +7,10 @@ concurrency : $(OBJS)
 	$(CC) $(LFLAGS) $(OBJS) -o concurrency
 
 concurrency.o : concurrency.cpp
-	$(CC) $(CFLAGS) concurrency.cpp
+	$(CC) $(CFLAGS) -pthread concurrency.cpp
 
 clean:
 	\rm *.o *~ concurrency
 
 tar:
 	tar cfv concurrency.tar concurrency.cpp
-	

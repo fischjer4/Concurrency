@@ -28,6 +28,7 @@
 
 
 #include <iostream>
+#include <pthread.h>
 using namespace std;
 
 /*
@@ -41,7 +42,7 @@ using namespace std;
 
 struct Philosopher{
 	string name;
-	(void*)(int) action;
+	void (*action)(string);
 	int hasBoothForks;
 };
 
@@ -62,11 +63,11 @@ void eating(string name){
 /*
 	* Prints out that the philosopher is thinking
 */
-void eating(string name){
+void thinking(string name){
 	cout << name << " is thinking " << endl;
 }
 
-void begin(void* philo){
+void* begin(void* philo){
 	struct Philosopher* curPhilo = (struct Philosopher*)philo;
 	curPhilo->action(curPhilo->name);
 	pthread_exit(NULL);
@@ -76,7 +77,7 @@ void begin(void* philo){
 /*
 	* Initilizes the five philosophers
 */
-void initPhils(struct Philosopher allPhilos[]){
+void initPhilos(struct Philosopher allPhilos[]){
 	/* First Philosopher */
 	allPhilos[0].name = PHIL_1;
 	allPhilos[0].action = thinking;
@@ -106,16 +107,16 @@ int main(int argc, char *argv[]){
 	srand(time(NULL));	
 	struct Philosopher allPhilos[5];
 	pthread_t threads[5];
-
+	initPhilos(allPhilos);
 	for(int i = 0 ; i < 5; i++){
-		if(!pthread_create(&threads[i], NULL, begin, (void*) &allPhilos[i])){
+		if(pthread_create(&threads[i], NULL, begin, (void*) &allPhilos[i])){
 			cout << "Error: " 
 				 << allPhilos[i].name 
 				 << " thread could not be initialised ... exiting now" 
 				 << endl;
 		}
 	}
-	
+
 	pthread_exit(NULL);	
 
 	return 0;
