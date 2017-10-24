@@ -28,6 +28,8 @@
 #include <iostream>
 #include <pthread.h>
 #include <unistd.h>
+#include <semaphore.h>
+
 using namespace std;
 
 
@@ -39,6 +41,7 @@ struct Philosopher{
 struct Philosopher allPhilos[5];
 pthread_mutex_t printToOut;
 pthread_mutex_t chopsticks[5];
+sem_t semm;
 /*
 	* Prints the five philosophers and their currecnt action
 */
@@ -93,15 +96,17 @@ void thinking(struct Philosopher* curPhilo, int timeThink){
 */
 void* begin(void* philo){
 	struct Philosopher* curPhilo = (struct Philosopher*)philo;
-		pthread_mutex_lock(&chopsticks[curPhilo->philoNumber]);
-		// pthread_mutex_lock(&chopsticks[ (curPhilo->philoNumber % 5) ]);
-		// Begin Locked Area
-		thinking(curPhilo, rand_num(1, 2));			
-		eating(curPhilo, rand_num(1, 2));
-		// thinking(curPhilo, rand_num(1, 20));		
-		// End Locked Area
-		// pthread_mutex_unlock(&chopsticks[ (curPhilo->philoNumber % 5) ]);	
-		pthread_mutex_unlock(&chopsticks[curPhilo->philoNumber]);
+		sem_wait(&semm);
+			pthread_mutex_lock(&chopsticks[curPhilo->philoNumber]);
+			pthread_mutex_lock(&chopsticks[ (curPhilo->philoNumber % 5) ]);
+			// Begin Locked Area
+			thinking(curPhilo, rand_num(1, 20));			
+			eating(curPhilo, rand_num(1, 9));
+			// thinking(curPhilo, rand_num(1, 20));		
+			// End Locked Area
+			pthread_mutex_unlock(&chopsticks[curPhilo->philoNumber]);
+			pthread_mutex_unlock(&chopsticks[ (curPhilo->philoNumber % 5) ]);
+		sem_signal(&semm);
 	pthread_exit(NULL);
 }
 /*
@@ -116,7 +121,8 @@ void initChopsticks(){
 	* Invite  the five philosophers (Initializing the mutexes)
 */
 void initPhilos(string philoNames[]){
-	for(int i = 0; i < 2; i++){
+	sem_init(&semm, 0, 4);
+	for(int i = 0; i < 5; i++){
 		allPhilos[i].name = philoNames[i];
 		allPhilos[i].action = "?";
 		allPhilos[i].philoNumber = i;
