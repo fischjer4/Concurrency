@@ -113,7 +113,7 @@ void thinking(struct Philosopher* curPhilo, int timeThink){
 void* begin(void* philo){
 	struct Philosopher* curPhilo = (struct Philosopher*)philo;
 	while(true){
-		thinking(curPhilo, rand_num(1, 1));					
+		thinking(curPhilo, rand_num(1, 20));					
 		sem_wait(&semm);
 			pthread_mutex_lock(&chopsticks[curPhilo->philoNumber]);
 			pthread_mutex_lock(&chopsticks[ (curPhilo->philoNumber + 1) % 5 ]);
@@ -121,7 +121,7 @@ void* begin(void* philo){
 			pthread_mutex_unlock(&chopsticks[curPhilo->philoNumber]);
 			pthread_mutex_unlock(&chopsticks[ (curPhilo->philoNumber + 1) % 5 ]);
 		sem_post(&semm);
-		thinking(curPhilo, rand_num(1, 1));							
+		thinking(curPhilo, rand_num(1, 20));							
 	}
 	pthread_exit(NULL);
 }

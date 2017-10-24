@@ -6,4 +6,4 @@ clean:
 	\rm *.o *~ concurrency
 
 tar:
-	tar cfv concurrency.tar concurrency.cpp
+	tar -cvjf concurrency.tar.bz2 concurrency.cpp Makefile goo README.md
