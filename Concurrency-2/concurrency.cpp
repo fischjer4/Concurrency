@@ -55,7 +55,7 @@ struct Philosopher{
 struct Philosopher allPhilos[5];
 pthread_mutex_t printToOut;
 pthread_mutex_t chopsticks[5];
-sem_t onlyFours;
+sem_t onlyFour;
 /*
 	* Prints the five philosophers and their currecnt action
 	* NOTE: This function must be called within a locked section or undefined output
@@ -114,13 +114,13 @@ void* begin(void* philo){
 	struct Philosopher* curPhilo = (struct Philosopher*)philo;
 	while(true){
 		thinking(curPhilo, rand_num(1, 20));					
-		sem_wait(&onlyFours);
+		sem_wait(&onlyFour);
 			pthread_mutex_lock(&chopsticks[curPhilo->philoNumber]);
 			pthread_mutex_lock(&chopsticks[ (curPhilo->philoNumber + 1) % 5 ]);
 				eating(curPhilo, rand_num(2, 9));
 			pthread_mutex_unlock(&chopsticks[curPhilo->philoNumber]);
 			pthread_mutex_unlock(&chopsticks[ (curPhilo->philoNumber + 1) % 5 ]);
-		sem_post(&onlyFours);
+		sem_post(&onlyFour);
 		thinking(curPhilo, rand_num(1, 20));							
 	}
 	pthread_exit(NULL);
@@ -137,7 +137,7 @@ void initChopsticks(){
 	* Invite  the five philosophers (Initializing the mutexes)
 */
 void initPhilos(string philoNames[]){
-	sem_init(&onlyFours, 0, 4);
+	sem_init(&onlyFour, 0, 4);
 	for(int i = 0; i < 5; i++){
 		allPhilos[i].name = philoNames[i];
 		allPhilos[i].action = "----";
@@ -145,7 +145,7 @@ void initPhilos(string philoNames[]){
 	}
 }
 void cleanUp(pthread_t threads[]){
-	sem_destroy(&onlyFour)
+	sem_destroy(&onlyFour);
 	pthread_mutex_destroy(&printToOut);	
 	for(int i = 0; i < 5; i++){
 		pthread_join(threads[i], NULL);
