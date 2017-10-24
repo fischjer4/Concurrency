@@ -32,10 +32,12 @@ using namespace std;
 
 
 struct Philosopher{
+	int philoNumber;
 	string name;
 	string action;
 };
 struct Philosopher allPhilos[5];
+pthread_mutex_t printToOut;
 pthread_mutex_t chopsticks[5];
 
 /*
@@ -56,46 +58,56 @@ void printTable(){
 }
 /*
 	* Returns a random integer in the 
-	  inclusive range of [inclus_min, inclus_max]
+	   inclusive range of [inclus_min, inclus_max]
 */
 int rand_num(int inclus_min, int inlus_max){
    	return rand() % (inlus_max - inclus_min + 1) + inclus_min;
 }
 /*
-	* Prints out that the philosopher is eating
+	* Prints Out That The Philosopher Is Eating
 */
 void eating(struct Philosopher* curPhilo, int timeEat){
 	curPhilo->action = "\\ /";
+	pthread_mutex_lock(&printToOut);
+	// Locking STDOUT
 	cout << curPhilo->name << " is eating for " << timeEat << " seconds" << endl;
 	printTable();
+	// UNLOCKING STDOUT
+	pthread_mutex_unlock(&printToOut);
 	sleep(timeEat);
 }
 /*
-	* Prints out that the philosopher is thinking
+	* Prints Out That The Philosopher Is Thinking
 */
 void thinking(struct Philosopher* curPhilo, int timeThink){
 	curPhilo->action = "?";
+	pthread_mutex_lock(&printToOut);
+	// Locking STDOUT
 	cout << curPhilo->name << " is thinking for " << timeThink << " seconds" << endl;
 	printTable();
+	// UNLOCKING STDOUT
+	pthread_mutex_unlock(&printToOut);
 	sleep(timeThink);
 }
 /*
-	* The "sitting at the table" ... the dining function
+	* Have Everuyone Sit At The Table (Main Thread Function)
 */
 void* begin(void* philo){
-	pthread_mutex_lock(&chopsticks[0]);
-	
 	struct Philosopher* curPhilo = (struct Philosopher*)philo;
-		thinking(curPhilo, rand_num(1, 20));			
-
-		eating(curPhilo, rand_num(1, 9));
-		
-		thinking(curPhilo, rand_num(1, 20));		
-	pthread_mutex_unlock(&chopsticks[0]);
+	pthread_mutex_lock(&chopsticks[curPhilo->philoNumber]);
+	// pthread_mutex_lock(&chopsticks[ (curPhilo->philoNumber % 5) ]);
+	// Begin Locked Area
+	thinking(curPhilo, rand_num(1, 2));			
+	eating(curPhilo, rand_num(1, 2));
+	// thinking(curPhilo, rand_num(1, 20));		
+	// End Locked Area
+	// pthread_mutex_lock(&chopsticks[ (curPhilo->philoNumber % 5) ]);	
+	pthread_mutex_unlock(&chopsticks[curPhilo->philoNumber]);
+	
 	pthread_exit(NULL);
 }
 /*
-	* Initializing the mutexes
+	* Get The Chopsticks (Initializing the mutexes)
 */
 void initChopsticks(){
 	for(int i = 0; i < 5; i++){
@@ -103,12 +115,13 @@ void initChopsticks(){
 	}
 }
 /*
-	* Initilizes the five philosophers
+	* Invite  the five philosophers (Initializing the mutexes)
 */
 void initPhilos(string philoNames[]){
 	for(int i = 0; i < 5; i++){
 		allPhilos[i].name = philoNames[i];
 		allPhilos[i].action = "?";
+		allPhilos[i].philoNumber = i;
 	}
 }
 
@@ -119,8 +132,13 @@ int main(int argc, char *argv[]){
 	srand(time(NULL));	
 	string philoNames[] = {"Aristotle", "Plato", "Locke", "Socrates", "Marx"};
 	pthread_t threads[5];
+
+	/* Invite Philosophers And Get Chopsitcks (Init threads and Mutexes)*/
+	pthread_mutex_init(&printToOut, NULL);
 	initPhilos(philoNames);
 	initChopsticks();
+	
+	/* Everyone Sit At The Table (Start The Threads) */
 	for(int i = 0 ; i < 5; i++){
 		if(pthread_create(&threads[i], NULL, begin, (void*) &allPhilos[i])){
 			cout << "Error: " 
@@ -129,10 +147,11 @@ int main(int argc, char *argv[]){
 				 << endl;
 		}
 	}
-	
+	/* Say Goodbye And Wash Chopsitcks (Join threads and Clean Up Mutexes)*/
 	for(int i = 0; i < 5; i++){
 		pthread_join(threads[i], NULL);
 	}
+	pthread_mutex_destroy(&printToOut);
 	for(int i = 0; i < 5; i++){
 		pthread_mutex_destroy(&chopsticks[i]);
 	}
