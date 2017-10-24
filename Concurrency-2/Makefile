@@ -1,13 +1,6 @@
-OBJS = concurrency.o
 CC = g++
-DEBUG = -g
-CFLAGS = -Wall -c $(DEBUG)
-LFLAGS = -Wall $(DEBUG)
 concurrency : $(OBJS)
-	$(CC) $(LFLAGS) $(OBJS) -o concurrency
-
-concurrency.o : concurrency.cpp
-	$(CC) $(CFLAGS) -pthread concurrency.cpp
+	$(CC) -pthread -o concurrency concurrency.cpp
 
 clean:
 	\rm *.o *~ concurrency

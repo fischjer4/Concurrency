@@ -1,8 +1,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 *	Game Plan
-*		• Let the chopsticks be an array of semaphores
-*		• Initialize all Semaphores to 1 (note this is technically 
-*			a Mutex) (the 1 means the chopstick is available)
+*		• Let the chopsticks be an array of mutexes
 *		• When the ith philosopher wants to eat
 *			○ Wait for chopstick[i]
 *			○ Wait for chopstick[ (i+1) % 5]
@@ -29,24 +27,33 @@
 
 #include <iostream>
 #include <pthread.h>
+#include <unistd.h>
 using namespace std;
 
-/*
-	* Defining philosopher Names for output
-*/
-#define PHIL_1 "Aristotle"
-#define PHIL_2 "Plato"
-#define PHIL_3 "Locke"
-#define PHIL_4 "Socrates"
-#define PHIL_5 "Marx"
 
 struct Philosopher{
 	string name;
-	void (*action)(string);
-	int hasBoothForks;
+	string action;
 };
+struct Philosopher allPhilos[5];
+pthread_mutex_t chopsticks[5];
 
-
+/*
+	* Prints the five philosophers and their currecnt action
+*/
+void printTable(){
+	cout << endl << "******************************************************************************" << endl;	
+	cout << "			" << allPhilos[0].name << " " 
+		 << allPhilos[0].action << endl << endl;
+	cout << allPhilos[1].name << " " << allPhilos[1].action 
+		 << "						" 
+		 << allPhilos[2].name << " " << allPhilos[2].action << endl << endl;
+	cout <<"	" 
+		 << allPhilos[3].name << " " << allPhilos[3].action 
+		 << "			" 
+		 << allPhilos[4].name << " " << allPhilos[4].action << endl;
+	cout << endl << "******************************************************************************" << endl;
+}
 /*
 	* Returns a random integer in the 
 	  inclusive range of [inclus_min, inclus_max]
@@ -57,47 +64,52 @@ int rand_num(int inclus_min, int inlus_max){
 /*
 	* Prints out that the philosopher is eating
 */
-void eating(string name){
-	cout << name << " is eating " << endl;
+void eating(struct Philosopher* curPhilo, int timeEat){
+	curPhilo->action = "\\ /";
+	cout << curPhilo->name << " is eating for " << timeEat << " seconds" << endl;
+	printTable();
+	sleep(timeEat);
 }
 /*
 	* Prints out that the philosopher is thinking
 */
-void thinking(string name){
-	cout << name << " is thinking " << endl;
+void thinking(struct Philosopher* curPhilo, int timeThink){
+	curPhilo->action = "?";
+	cout << curPhilo->name << " is thinking for " << timeThink << " seconds" << endl;
+	printTable();
+	sleep(timeThink);
 }
-
+/*
+	* The "sitting at the table" ... the dining function
+*/
 void* begin(void* philo){
+	pthread_mutex_lock(&chopsticks[0]);
+	
 	struct Philosopher* curPhilo = (struct Philosopher*)philo;
-	curPhilo->action(curPhilo->name);
+		thinking(curPhilo, rand_num(1, 20));			
+
+		eating(curPhilo, rand_num(1, 9));
+		
+		thinking(curPhilo, rand_num(1, 20));		
+	pthread_mutex_unlock(&chopsticks[0]);
 	pthread_exit(NULL);
 }
-
-
+/*
+	* Initializing the mutexes
+*/
+void initChopsticks(){
+	for(int i = 0; i < 5; i++){
+		 pthread_mutex_init(&chopsticks[i], NULL);
+	}
+}
 /*
 	* Initilizes the five philosophers
 */
-void initPhilos(struct Philosopher allPhilos[]){
-	/* First Philosopher */
-	allPhilos[0].name = PHIL_1;
-	allPhilos[0].action = thinking;
-	allPhilos[0].hasBoothForks = 0;
-	/* Second Philosopher */
-	allPhilos[1].name = PHIL_2;
-	allPhilos[1].action = thinking;
-	allPhilos[1].hasBoothForks = 0;
-	/* Third Philosopher */
-	allPhilos[2].name = PHIL_3;
-	allPhilos[2].action = thinking;
-	allPhilos[2].hasBoothForks = 0;
-	/* Fourth Philosopher */
-	allPhilos[3].name = PHIL_4;
-	allPhilos[3].action = thinking;
-	allPhilos[3].hasBoothForks = 0;
-	/* Fifth Philosopher */
-	allPhilos[4].name = PHIL_5;
-	allPhilos[4].action = thinking;
-	allPhilos[4].hasBoothForks = 0;
+void initPhilos(string philoNames[]){
+	for(int i = 0; i < 5; i++){
+		allPhilos[i].name = philoNames[i];
+		allPhilos[i].action = "?";
+	}
 }
 
 /*
@@ -105,9 +117,10 @@ void initPhilos(struct Philosopher allPhilos[]){
 */
 int main(int argc, char *argv[]){
 	srand(time(NULL));	
-	struct Philosopher allPhilos[5];
+	string philoNames[] = {"Aristotle", "Plato", "Locke", "Socrates", "Marx"};
 	pthread_t threads[5];
-	initPhilos(allPhilos);
+	initPhilos(philoNames);
+	initChopsticks();
 	for(int i = 0 ; i < 5; i++){
 		if(pthread_create(&threads[i], NULL, begin, (void*) &allPhilos[i])){
 			cout << "Error: " 
@@ -116,8 +129,13 @@ int main(int argc, char *argv[]){
 				 << endl;
 		}
 	}
-
-	pthread_exit(NULL);	
+	
+	for(int i = 0; i < 5; i++){
+		pthread_join(threads[i], NULL);
+	}
+	for(int i = 0; i < 5; i++){
+		pthread_mutex_destroy(&chopsticks[i]);
+	}
 
 	return 0;
 }
