@@ -1,7 +1,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+*	NOTE: sem_init is deprecated on MacOS. As in, this program won't operate correctly 
+*		    on a Mac due to the semaphore not being initialized.
+*
 *	Game Plan
 *		• Let the chopsticks be an array of mutexes
-*		• When the ith philosopher wants to eat
+*		• Let there be a semaphore only allowing four philosophers 
+*			to eat at a time (to prevent deadlock)
+*		• The ith Philosopher thinks
+*		• When the ith philosopher wants to eat and there is space (i.e. semaphore allows)
 *			○ Wait for chopstick[i]
 *			○ Wait for chopstick[ (i+1) % 5]
 *			○ Eat
@@ -21,6 +27,11 @@
 *				3) Even number philosophers take the chopstick to their 
 *					right first and odd number philosophers will take the 
 *					chopstick to their left first. Deadlock can't take place here
+*
+*	One can see that our solution works by viewing the programs output (the table). 
+*	A philosopher will have a ? next to their name if they're thinking. 
+*	A philosopher will have a \/ next to their name if they're eating. 
+*	One can see that no two adjacent philosophers are eating.
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -28,9 +39,12 @@
 #include <iostream>
 #include <pthread.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <semaphore.h>
 
-using namespace std;
+using std::cout;
+using std::endl;
+using std::string;
 
 
 struct Philosopher{
@@ -44,18 +58,20 @@ pthread_mutex_t chopsticks[5];
 sem_t semm;
 /*
 	* Prints the five philosophers and their currecnt action
+	* NOTE: This function must be called within a locked section or undefined output
+			   to the screen will be produced.
 */
 void printTable(){
 	cout << endl << "******************************************************************************" << endl;	
-	cout << "			" << allPhilos[0].name << " " 
-		 << allPhilos[0].action << endl << endl;
+	cout << "			"
+		 << allPhilos[0].name << " " << allPhilos[0].action << endl << endl;
 	cout << allPhilos[1].name << " " << allPhilos[1].action 
 		 << "						" 
-		 << allPhilos[2].name << " " << allPhilos[2].action << endl << endl;
+		 << allPhilos[4].name << " " << allPhilos[4].action << endl << endl;
 	cout <<"	" 
-		 << allPhilos[3].name << " " << allPhilos[3].action 
+		 << allPhilos[2].name << " " << allPhilos[2].action 
 		 << "			" 
-		 << allPhilos[4].name << " " << allPhilos[4].action << endl;
+		 << allPhilos[3].name << " " << allPhilos[3].action << endl;
 	cout << endl << "******************************************************************************" << endl;
 }
 /*
@@ -92,21 +108,21 @@ void thinking(struct Philosopher* curPhilo, int timeThink){
 	sleep(timeThink);
 }
 /*
-	* Have Everuyone Sit At The Table (Main Thread Function)
+	* Have Everyone Sit At The Table (Main Thread Function)
 */
 void* begin(void* philo){
 	struct Philosopher* curPhilo = (struct Philosopher*)philo;
+	while(true){
+		thinking(curPhilo, rand_num(1, 1));					
 		sem_wait(&semm);
 			pthread_mutex_lock(&chopsticks[curPhilo->philoNumber]);
-			pthread_mutex_lock(&chopsticks[ (curPhilo->philoNumber % 5) ]);
-			// Begin Locked Area
-			thinking(curPhilo, rand_num(1, 20));			
-			eating(curPhilo, rand_num(1, 9));
-			// thinking(curPhilo, rand_num(1, 20));		
-			// End Locked Area
+			pthread_mutex_lock(&chopsticks[ (curPhilo->philoNumber + 1) % 5 ]);
+				eating(curPhilo, rand_num(2, 9));
 			pthread_mutex_unlock(&chopsticks[curPhilo->philoNumber]);
-			pthread_mutex_unlock(&chopsticks[ (curPhilo->philoNumber % 5) ]);
-		sem_signal(&semm);
+			pthread_mutex_unlock(&chopsticks[ (curPhilo->philoNumber + 1) % 5 ]);
+		sem_post(&semm);
+		thinking(curPhilo, rand_num(1, 1));							
+	}
 	pthread_exit(NULL);
 }
 /*
@@ -124,7 +140,7 @@ void initPhilos(string philoNames[]){
 	sem_init(&semm, 0, 4);
 	for(int i = 0; i < 5; i++){
 		allPhilos[i].name = philoNames[i];
-		allPhilos[i].action = "?";
+		allPhilos[i].action = "----";
 		allPhilos[i].philoNumber = i;
 	}
 }
@@ -148,6 +164,7 @@ int main(int argc, char *argv[]){
 	pthread_mutex_init(&printToOut, NULL);
 	initPhilos(philoNames);
 	initChopsticks();
+	printTable();
 	/* Everyone Sit At The Table (Start The Threads) */
 	for(int i = 0 ; i < 5; i++){
 		if(pthread_create(&threads[i], NULL, begin, (void*) &allPhilos[i])){
