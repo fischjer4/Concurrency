@@ -39,7 +39,6 @@ struct Philosopher{
 struct Philosopher allPhilos[5];
 pthread_mutex_t printToOut;
 pthread_mutex_t chopsticks[5];
-
 /*
 	* Prints the five philosophers and their currecnt action
 */
@@ -94,16 +93,15 @@ void thinking(struct Philosopher* curPhilo, int timeThink){
 */
 void* begin(void* philo){
 	struct Philosopher* curPhilo = (struct Philosopher*)philo;
-	pthread_mutex_lock(&chopsticks[curPhilo->philoNumber]);
-	// pthread_mutex_lock(&chopsticks[ (curPhilo->philoNumber % 5) ]);
-	// Begin Locked Area
-	thinking(curPhilo, rand_num(1, 2));			
-	eating(curPhilo, rand_num(1, 2));
-	// thinking(curPhilo, rand_num(1, 20));		
-	// End Locked Area
-	// pthread_mutex_lock(&chopsticks[ (curPhilo->philoNumber % 5) ]);	
-	pthread_mutex_unlock(&chopsticks[curPhilo->philoNumber]);
-	
+		pthread_mutex_lock(&chopsticks[curPhilo->philoNumber]);
+		// pthread_mutex_lock(&chopsticks[ (curPhilo->philoNumber % 5) ]);
+		// Begin Locked Area
+		thinking(curPhilo, rand_num(1, 2));			
+		eating(curPhilo, rand_num(1, 2));
+		// thinking(curPhilo, rand_num(1, 20));		
+		// End Locked Area
+		// pthread_mutex_unlock(&chopsticks[ (curPhilo->philoNumber % 5) ]);	
+		pthread_mutex_unlock(&chopsticks[curPhilo->philoNumber]);
 	pthread_exit(NULL);
 }
 /*
@@ -118,13 +116,21 @@ void initChopsticks(){
 	* Invite  the five philosophers (Initializing the mutexes)
 */
 void initPhilos(string philoNames[]){
-	for(int i = 0; i < 5; i++){
+	for(int i = 0; i < 2; i++){
 		allPhilos[i].name = philoNames[i];
 		allPhilos[i].action = "?";
 		allPhilos[i].philoNumber = i;
 	}
 }
-
+void cleanUp(pthread_t threads[]){
+	for(int i = 0; i < 5; i++){
+		pthread_join(threads[i], NULL);
+	}
+	pthread_mutex_destroy(&printToOut);
+	for(int i = 0; i < 5; i++){
+		pthread_mutex_destroy(&chopsticks[i]);
+	}
+}
 /*
 	* Main function
 */
@@ -132,12 +138,10 @@ int main(int argc, char *argv[]){
 	srand(time(NULL));	
 	string philoNames[] = {"Aristotle", "Plato", "Locke", "Socrates", "Marx"};
 	pthread_t threads[5];
-
 	/* Invite Philosophers And Get Chopsitcks (Init threads and Mutexes)*/
 	pthread_mutex_init(&printToOut, NULL);
 	initPhilos(philoNames);
 	initChopsticks();
-	
 	/* Everyone Sit At The Table (Start The Threads) */
 	for(int i = 0 ; i < 5; i++){
 		if(pthread_create(&threads[i], NULL, begin, (void*) &allPhilos[i])){
@@ -147,14 +151,8 @@ int main(int argc, char *argv[]){
 				 << endl;
 		}
 	}
-	/* Say Goodbye And Wash Chopsitcks (Join threads and Clean Up Mutexes)*/
-	for(int i = 0; i < 5; i++){
-		pthread_join(threads[i], NULL);
-	}
-	pthread_mutex_destroy(&printToOut);
-	for(int i = 0; i < 5; i++){
-		pthread_mutex_destroy(&chopsticks[i]);
-	}
-
+	/* Say Goodbye And Wash Chopsitcks (Join threads and Clean Up Mutexes)*/	
+	cleanUp(threads);
+	
 	return 0;
 }
