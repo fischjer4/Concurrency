@@ -1,10 +1,10 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-*	NOTE: sem_init is deprecated on MacOS. As in, this program won't operate correctly 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*	NOTE: sem_init is deprecated on MacOS. As in, this program won't operate correctly
 *		    on a Mac due to the semaphore not being initialized.
 *
 *	Game Plan
 *		• Let the chopsticks be an array of mutexes
-*		• Let there be a semaphore only allowing four philosophers 
+*		• Let there be a semaphore only allowing four philosophers
 *			to eat at a time (to prevent deadlock)
 *		• The ith Philosopher thinks
 *		• When the ith philosopher wants to eat and there is space (i.e. semaphore allows)
@@ -18,19 +18,19 @@
 *
 *	Potential Problem
 *		• What happens if each philosopher grabs the chopstick to their right?
-*			○ Then they are all in deadlock (or starvation) 
+*			○ Then they are all in deadlock (or starvation)
 *				because they are all waiting on the left chopstick to eat
 *			Solutions:
 *				1) Only allow four philosophers to eat at a time
-*				2) A philosopher will only start eating if both 
+*				2) A philosopher will only start eating if both
 *					chopsticks are available
-*				3) Even number philosophers take the chopstick to their 
-*					right first and odd number philosophers will take the 
+*				3) Even number philosophers take the chopstick to their
+*					right first and odd number philosophers will take the
 *					chopstick to their left first. Deadlock can't take place here
 *
-*	One can see that our solution works by viewing the programs output (the table). 
-*	A philosopher will have a ? next to their name if they're thinking. 
-*	A philosopher will have a \/ next to their name if they're eating. 
+*	One can see that our solution works by viewing the programs output (the table).
+*	A philosopher will have a ? next to their name if they're thinking.
+*	A philosopher will have a \/ next to their name if they're eating.
 *	One can see that no two adjacent philosophers are eating.
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,11 +41,12 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <semaphore.h>
+#include <sstream>
 
 using std::cout;
 using std::endl;
 using std::string;
-
+using std::stringstream;
 
 struct Philosopher{
 	int philoNumber;
@@ -56,36 +57,50 @@ struct Philosopher allPhilos[5];
 pthread_mutex_t printToOut;
 pthread_mutex_t chopsticks[5];
 sem_t onlyFour;
+
 /*
 	* Prints the five philosophers and their currecnt action
 	* NOTE: This function must be called within a locked section or undefined output
 			   to the screen will be produced.
 */
-void printTable(){
-	cout << endl << "******************************************************************************" << endl;	
+void printTable()
+{
+	cout << endl << "******************************************************************************" << endl;
 	cout << "			"
 		 << allPhilos[0].name << " " << allPhilos[0].action << endl << endl;
-	cout << allPhilos[1].name << " " << allPhilos[1].action 
-		 << "						" 
+	cout << allPhilos[1].name << " " << allPhilos[1].action
+		 << "						"
 		 << allPhilos[4].name << " " << allPhilos[4].action << endl << endl;
-	cout <<"	" 
-		 << allPhilos[2].name << " " << allPhilos[2].action 
-		 << "			" 
+	cout <<"	"
+		 << allPhilos[2].name << " " << allPhilos[2].action
+		 << "			"
 		 << allPhilos[3].name << " " << allPhilos[3].action << endl;
 	cout << endl << "******************************************************************************" << endl;
 }
+
 /*
-	* Returns a random integer in the 
+	* Returns a random integer in the
 	   inclusive range of [inclus_min, inclus_max]
 */
-int rand_num(int inclus_min, int inlus_max){
+int rand_num(int inclus_min, int inlus_max)
+{
    	return rand() % (inlus_max - inclus_min + 1) + inclus_min;
 }
+
 /*
 	* Prints Out That The Philosopher Is Eating
 */
-void eating(struct Philosopher* curPhilo, int timeEat){
-	curPhilo->action = "\\ /";
+void eating(struct Philosopher* curPhilo, int timeEat)
+{
+	string chopstick1;
+	string chopstick2;
+	stringstream out1;
+	stringstream out2;
+	out1 << curPhilo->philoNumber + 1;
+	chopstick1 = out1.str();
+	out2 << ((curPhilo->philoNumber + 1) % 5) + 1;
+	chopstick2 = out2.str();
+	curPhilo->action = "\\" + chopstick1 + " /" + chopstick2;
 	pthread_mutex_lock(&printToOut);
 	// Locking STDOUT
 	cout << curPhilo->name << " is eating for " << timeEat << " seconds" << endl;
@@ -94,10 +109,12 @@ void eating(struct Philosopher* curPhilo, int timeEat){
 	pthread_mutex_unlock(&printToOut);
 	sleep(timeEat);
 }
+
 /*
 	* Prints Out That The Philosopher Is Thinking
 */
-void thinking(struct Philosopher* curPhilo, int timeThink){
+void thinking(struct Philosopher* curPhilo, int timeThink)
+{
 	curPhilo->action = "?";
 	pthread_mutex_lock(&printToOut);
 	// Locking STDOUT
@@ -107,13 +124,15 @@ void thinking(struct Philosopher* curPhilo, int timeThink){
 	pthread_mutex_unlock(&printToOut);
 	sleep(timeThink);
 }
+
 /*
 	* Have Everyone Sit At The Table (Main Thread Function)
 */
-void* begin(void* philo){
+void* begin(void* philo)
+{
 	struct Philosopher* curPhilo = (struct Philosopher*)philo;
 	while(true){
-		thinking(curPhilo, rand_num(1, 20));					
+		thinking(curPhilo, rand_num(1, 20));
 		sem_wait(&onlyFour);
 			pthread_mutex_lock(&chopsticks[curPhilo->philoNumber]);
 			pthread_mutex_lock(&chopsticks[ (curPhilo->philoNumber + 1) % 5 ]);
@@ -121,22 +140,26 @@ void* begin(void* philo){
 			pthread_mutex_unlock(&chopsticks[curPhilo->philoNumber]);
 			pthread_mutex_unlock(&chopsticks[ (curPhilo->philoNumber + 1) % 5 ]);
 		sem_post(&onlyFour);
-		thinking(curPhilo, rand_num(1, 20));							
+		thinking(curPhilo, rand_num(1, 20));
 	}
 	pthread_exit(NULL);
 }
+
 /*
 	* Get The Chopsticks (Initializing the mutexes)
 */
-void initChopsticks(){
+void initChopsticks()
+{
 	for(int i = 0; i < 5; i++){
 		 pthread_mutex_init(&chopsticks[i], NULL);
 	}
 }
+
 /*
 	* Invite  the five philosophers (Initializing the mutexes)
 */
-void initPhilos(string philoNames[]){
+void initPhilos(string philoNames[])
+{
 	sem_init(&onlyFour, 0, 4);
 	for(int i = 0; i < 5; i++){
 		allPhilos[i].name = philoNames[i];
@@ -144,9 +167,11 @@ void initPhilos(string philoNames[]){
 		allPhilos[i].philoNumber = i;
 	}
 }
-void cleanUp(pthread_t threads[]){
+
+void cleanUp(pthread_t threads[])
+{
 	sem_destroy(&onlyFour);
-	pthread_mutex_destroy(&printToOut);	
+	pthread_mutex_destroy(&printToOut);
 	for(int i = 0; i < 5; i++){
 		pthread_join(threads[i], NULL);
 	}
@@ -154,11 +179,13 @@ void cleanUp(pthread_t threads[]){
 		pthread_mutex_destroy(&chopsticks[i]);
 	}
 }
+
 /*
 	* Main function
 */
-int main(int argc, char *argv[]){
-	srand(time(NULL));	
+int main(int argc, char *argv[])
+{
+	srand(time(NULL));
 	string philoNames[] = {"Aristotle", "Plato", "Locke", "Socrates", "Marx"};
 	pthread_t threads[5];
 	/* Invite Philosophers And Get Chopsitcks (Init threads and Mutexes)*/
@@ -169,14 +196,14 @@ int main(int argc, char *argv[]){
 	/* Everyone Sit At The Table (Start The Threads) */
 	for(int i = 0 ; i < 5; i++){
 		if(pthread_create(&threads[i], NULL, begin, (void*) &allPhilos[i])){
-			cout << "Error: " 
-				 << allPhilos[i].name 
-				 << " thread could not be initialised ... exiting now" 
+			cout << "Error: "
+				 << allPhilos[i].name
+				 << " thread could not be initialised ... exiting now"
 				 << endl;
 		}
 	}
-	/* Say Goodbye And Wash Chopsitcks (Join threads and Clean Up Mutexes)*/	
+	/* Say Goodbye And Wash Chopsitcks (Join threads and Clean Up Mutexes)*/
 	cleanUp(threads);
-	
+
 	return 0;
 }
