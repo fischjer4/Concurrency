@@ -96,11 +96,11 @@ void eating(struct Philosopher* curPhilo, int timeEat)
 	string chopstick2;
 	stringstream out1;
 	stringstream out2;
-	out1 << curPhilo->philoNumber + 1;
+	out1 << curPhilo->philoNumber;
 	chopstick1 = out1.str();
-	out2 << ((curPhilo->philoNumber + 1) % 5) + 1;
+	out2 << ((curPhilo->philoNumber + 1) % 5);
 	chopstick2 = out2.str();
-	curPhilo->action = "\\" + chopstick1 + " /" + chopstick2;
+	curPhilo->action = "\\ / chops: " + chopstick1 + " and "+ chopstick2;
 	pthread_mutex_lock(&printToOut);
 	// Locking STDOUT
 	cout << curPhilo->name << " is eating for " << timeEat << " seconds" << endl;
