@@ -29,8 +29,7 @@ SOURCES USED:
 #define BUFF_SIZE 33
 
 /* BUFFER ITEM STRUCTS */
-struct item
-{
+struct item{
       int num;
       int wait_time;
 };
@@ -56,8 +55,7 @@ sem_t full_slots;
 sem_t mutex;
 
 /* RDRAND */
-int rdrand32_step(uint32_t *rand)
-{
+int rdrand32_step(uint32_t *rand){
       unsigned char ok;
       asm volatile("rdrand %0; setc %1"
                    : "=r"(*rand), "=qm"(ok));
@@ -66,8 +64,7 @@ int rdrand32_step(uint32_t *rand)
 }
 
 /* CHECK IF SYSTEM SUPPORTS RDRAND */
-int check_supports_rdrand()
-{
+int check_supports_rdrand(){
       const unsigned int flag_RDRAND = (1 << 30);
       unsigned int eax;
       unsigned int ebx;
@@ -81,8 +78,7 @@ int check_supports_rdrand()
 }
 
 /* PRODUCE ITEMS */
-void* produce_items(void *producer_num)
-{
+void* produce_items(void *producer_num){
       int i;
       int prod_num = *((int *)producer_num);
       uint32_t rand_sleep;
@@ -90,45 +86,47 @@ void* produce_items(void *producer_num)
       uint32_t rand_wait;
       int supports_rdrand;
       int seed;
-      srand (time(NULL));
+     
       supports_rdrand = check_supports_rdrand();
-      if (supports_rdrand) {
+      if(supports_rdrand){
             printf("Your system supports RDRAND.\n");
       }
-      else {
+      else{
             printf("Your system does not support RDRAND. "
                    "Mersenne Twister will be used instead.\n");
       }
-      for (i = 0; i < prod_loops; i++)
-      {
-            if(filled < BUFF_SIZE)
-            {
+      for (i = 0; i < prod_loops; i++){
+            if(filled < BUFF_SIZE){
                   sem_wait(&empty_slots); //check if empty slot available
                   sem_wait(&mutex);
 
                   //begin critical area 
-                  if (supports_rdrand) {
+                  if(supports_rdrand){
                         do {
                               rdrand32_step(&rand_sleep);
                               rand_sleep = rand_sleep % 10;
                         } while (rand_sleep < 3 || rand_sleep > 7);
+                        
                         rdrand32_step(&rand_num);
+                        
                         do {
                               rdrand32_step(&rand_wait);
                               rand_wait = rand_wait % 10;
                         } while (rand_sleep < 2 || rand_sleep > 9);
                   }
-                  else {
+                  else{
                         seed = rand() % 100000000;
                         init_genrand(seed);
                         do {
                               rand_sleep = genrand_int32() % 10;
                         } while (rand_sleep < 3 || rand_sleep > 7);
+                        
                         seed = rand() % 100000000;
 			      init_genrand(seed);
                         rand_num = genrand_int32() % 10;
                         seed = rand() % 100000000;;
 			      init_genrand(seed);
+                        
                         do {
                               rand_wait = genrand_int32() % 10;
                         } while (rand_wait < 2 || rand_wait > 9);
@@ -149,26 +147,22 @@ void* produce_items(void *producer_num)
 }
 
 /* CONSUME ITEMS */
-void* consume_items(void *consumer_num)
-{
+void* consume_items(void *consumer_num){
       int i;
       int cons_num = *((int *)consumer_num);      
       struct item *consumed_item;
-      for (i = 0; i < cons_loops; i++)
-      {
-            if(used >= 0 && used < BUFF_SIZE)
-            {
+      for (i = 0; i < cons_loops; i++){
+            if(used >= 0 && used < BUFF_SIZE){
                   sem_wait(&full_slots); //check if there's a full slot
                   sem_wait(&mutex);
                   //begin critical area
                   consumed_item = &buffer[used];
-                  if(consumed_item != NULL)
-                  {
+                  if(consumed_item != NULL){
                         printf("\nConsumer '%d' is now sleeping for: %d seconds.\n", cons_num, consumed_item->wait_time);                        
                         sleep(consumed_item->wait_time);                  
                         printf("Consumer '%d' has consumed number: %d\n", cons_num, consumed_item->num);
                         used = (used + 1) % BUFF_SIZE;
-                  }
+                  }     
                   //end critical area            
                   sem_post(&mutex);
                   sem_post(&empty_slots); //let others know there's an empty slot]
@@ -178,16 +172,14 @@ void* consume_items(void *consumer_num)
 }
 
 /* MAIN */
-int main(int argc, char **argv)
-{
-
+int main(int argc, char **argv){
+      srand (time(NULL));      
       // IMPORTANT VARIABLES //
       pthread_t producer[prod_cnt];
       pthread_t consumer[cons_cnt];
 
       // VALIDATE NUMBER OF ARGUMENTS //
-      if (argc < 5)
-      {
+      if (argc < 5){
             fprintf(stderr, "Invalid number of arguments.\n");
             fprintf(stderr, "In addition to executable, must include (in the following order):\n");
             fprintf(stderr, "- number of producer threads\n");
@@ -210,23 +202,19 @@ int main(int argc, char **argv)
 
       // CREATE THREADS AND PRODUCE/CONFSUME ITEMS //
       int i = 0;
-      for (i = 0; i < prod_cnt; i++)
-      {
+      for (i = 0; i < prod_cnt; i++){
             pthread_create(&producer[i], NULL, produce_items, (void*)&i);
       }
-      for (i = 0; i < cons_cnt; i++)
-      {
+      for (i = 0; i < cons_cnt; i++){
             pthread_create(&consumer[i], NULL, consume_items, (void*)&i);
       }
 
       // BRING THREADS BACK TOGETHER //
-      for (i = 0; i < prod_cnt; i++)
-      {
+      for (i = 0; i < prod_cnt; i++){
             pthread_join(producer[i], NULL);
       }
 
-      for (i = 0; i < cons_cnt; i++)
-      {
+      for (i = 0; i < cons_cnt; i++){
             pthread_join(consumer[i], NULL);
       }
 
