@@ -23,13 +23,11 @@ struct IndvThread{
 	void* action;
 };
 
-sem_t empty;
-sem_t full_slots;
-sem_t mutex;
+sem_t stop;
 sem_t printer;
 int sval;
 
-//int num_processes = 0;
+int num_processes = 0;
 
 /*
 	* Outputs the thread number of the thread whose working
@@ -37,18 +35,17 @@ int sval;
 void working(const int &workerNum){
     int waittime = (rand() % 4) + 1;
     sem_wait(&printer);
-    cout << workerNum << " is working" << endl;
-    cout << "Wait time: " << waittime << endl;
+    cout << "Thread " << workerNum << " is working" << endl;
     sem_post(&printer);
     sleep(waittime);
-    sem_post(&full_slots);
+    num_processes--;
 }
 /*
 	* Outputs the thread number of the thread whose waiting
 */
 void waiting(const int &workerNum){
     sem_wait(&printer);
-	cout << workerNum << " is waiting" << endl;
+	cout << "Thread " << workerNum << " is waiting" << endl;
     sem_post(&printer);
 }
 /*
@@ -57,21 +54,14 @@ void waiting(const int &workerNum){
 */
 void *begin(void *worker){
     intptr_t threadNum = (intptr_t) worker;
-    sem_getvalue(&full_slots, &sval);
-    if (sval == MAX_PROCESSES) {
-        sem_wait(&mutex);
+    if (num_processes == MAX_PROCESSES) {
+        sem_post(&stop);
         waiting(threadNum);
-        while (sval > 0) {
-            sem_wait(&full_slots);
-            sem_getvalue(&full_slots, &sval);
-        }
-        sem_post(&mutex);
-        sem_wait(&full_slots);
-        working(threadNum);
+        while (num_processes > 0) {}
+        sem_wait(&stop);
     }
-    else {
-        working(threadNum);
-    }
+    num_processes++;
+    working(threadNum);
     return NULL;
 }
 /*
@@ -102,9 +92,7 @@ int main(int argc, char *argv[]){
     srand( time(NULL) );
     
     // INITIALIZE SEMAPHORES //
-    sem_init(&empty, 0, 1);
-    sem_init(&full_slots, 0, 0);
-    sem_init(&mutex, 0, 1);
+    sem_init(&stop, 0, 1);
     sem_init(&printer, 0, 1);
     
 	if(argc != 2){
