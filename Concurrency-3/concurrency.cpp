@@ -128,7 +128,7 @@ int main(int argc, char *argv[]){
 			pthread_t* threads = new pthread_t[numThreads];
 			initWorkers(workers, numThreads);
 			/* Start threads */ 
-			for(i = 0; i < numThreads; i++){
+			for(int i = 0; i < numThreads; i++){
                 //cout << "i: " << i << endl;
 				if( pthread_create(&threads[i], NULL, begin, (void *) i) < 0 ){
                     sem_wait(&printer);
