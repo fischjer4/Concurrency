@@ -1,5 +1,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-*
+ Sources Used:
+ * https://www.ibm.com/support/knowledgecenter/en/ssw_i5_54/apis/users_14.htm
+ * https://stackoverflow.com/questions/25848615/c-printing-cout-overlaps-in-multithreading
+ * 
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #define MAX_PROCESSES 3
