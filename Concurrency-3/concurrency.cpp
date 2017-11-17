@@ -2,7 +2,7 @@
  Sources Used:
  * https://www.ibm.com/support/knowledgecenter/en/ssw_i5_54/apis/users_14.htm
  * https://stackoverflow.com/questions/25848615/c-printing-cout-overlaps-in-multithreading
- * 
+ *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #define MAX_PROCESSES 3
@@ -36,11 +36,10 @@ int num_processes = 0;
 	* Outputs the thread number of the thread whose working
 */
 void working(const int &workerNum){
-    int waittime = (rand() % 4) + 1;
     sem_wait(&printer);
-    cout << "Thread " << workerNum << " is working" << endl;
+    cout << endl << "Thread " << workerNum << " is working..." << endl;
     sem_post(&printer);
-    sleep(waittime);
+    sleep(3);
     num_processes--;
 }
 /*
@@ -48,7 +47,7 @@ void working(const int &workerNum){
 */
 void waiting(const int &workerNum){
     sem_wait(&printer);
-	cout << "Thread " << workerNum << " is waiting" << endl;
+	cout << "Thread " << workerNum << " is waiting..." << endl;
     sem_post(&printer);
 }
 /*
@@ -60,7 +59,10 @@ void *begin(void *worker){
     if (num_processes == MAX_PROCESSES) {
         sem_post(&stop);
         waiting(threadNum);
-        while (num_processes > 0) {}
+        while (num_processes > 0) {
+            sleep(3);
+            waiting(threadNum);
+        }
         sem_wait(&stop);
     }
     num_processes++;
@@ -134,5 +136,6 @@ int main(int argc, char *argv[]){
 		}
 	}
 
+    cout << endl;
 	return 0;
 }
