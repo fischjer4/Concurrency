@@ -7,13 +7,13 @@
 #include <stdlib.h>
 #include <semaphore.h>
 #include <unistd.h>
-#include <forward_list>
+#include <list>
 
 
 using std::cout;
 using std::endl;
 using std::string;
-
+using std::list;
 
 struct IndvThread{
 	int threadNum;
@@ -29,7 +29,7 @@ pthread_t* insertThreads = NULL;
 pthread_t* deleteThreads = NULL;
 pthread_t* searchThreads = NULL;
 pthread_t printerThread;
-
+list<int> lst; /* The shared resource */
 
 /**********************************************************************
 					  Main Functions Per Thread Type 
@@ -38,7 +38,7 @@ pthread_t printerThread;
 /*
 	* The Main function for inerter threads
 */
-void* insertFunc(void *worker){
+void* insertFunc(void* worker){
     struct IndvThread* curInserter= (struct IndvThread*)worker;
 	while(true){
 
@@ -48,7 +48,7 @@ void* insertFunc(void *worker){
 /*
 	* The Main function for searcher threads
 */
-void* searchFunc(void *worker){
+void* searchFunc(void* worker){
     struct IndvThread* curSearcher= (struct IndvThread*)worker;
 	while(true){
 
@@ -58,7 +58,7 @@ void* searchFunc(void *worker){
 /*
 	* The Main function for deleter threads
 */
-void* deleteFunc(void *worker){
+void* deleteFunc(void* worker){
     struct IndvThread* curDeleter= (struct IndvThread*)worker;
 	while(true){
 
@@ -98,7 +98,7 @@ void initWorkers(const int &numThreads){
 	* Sets up the semaphore an mutexes
 */
 void initLocks(){
-	sem_init(&keyHolder, 0, 3);
+    pthread_mutex_init(&accessor, NULL);
     pthread_mutex_init(&printer, NULL);
 }
 
@@ -143,18 +143,18 @@ void freeAll(){
 }
 
 void startThreads(pthread_t threads[], struct IndvThread workers[], 
-					const int &numThreads, void (*funcPtr)()){
+					const int &numThreads, void* (funcPtr)(void*)){
 	
 	for(int i = 0; i < numThreads; i++){
-		if( pthread_create(&threads[i], NULL, *funcPtr, (void*)&workers[i]) < 0 ){
+		if( pthread_create(&threads[i], NULL, (funcPtr), (void*)&workers[i]) < 0 ){
 			pthread_mutex_lock(&printer);
 				cout << "Error: "
-					<< workers[i].type << " "
+					<< workers[i].threadType << " "
 					<< workers[i].threadNum
 					<< " thread could not be initialised ... exiting now"
 					<< endl;
 			pthread_mutex_unlock(&printer);
-			freeAll(threads, workers, numThreads);	
+			freeAll();	
 			exit(EXIT_FAILURE);
 		}
 	}
