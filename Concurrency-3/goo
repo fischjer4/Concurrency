@@ -1,4 +1,5 @@
 make clean;
-make;
+make all;
 clear;
-echo "To run type ./concurrency <num threads>"
+echo "To run part 1, type ./part1 <num threads>"
+echo "To run part 2, type ./part2 <num threads>"

@@ -1,20 +1,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- Sources Used:
- * https://www.ibm.com/support/knowledgecenter/en/ssw_i5_54/apis/users_14.htm
- * https://stackoverflow.com/questions/25848615/c-printing-cout-overlaps-in-multithreading
- *
+*
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-#define MAX_PROCESSES 3
 
 #include <iostream>
 #include <pthread.h>
 #include <stdlib.h>
 #include <semaphore.h>
-#include <stdint.h>
 #include <unistd.h>
-#include <stdio.h>
-#include <time.h>
+
+
+#define MAX_PROCESSES 3
 
 using std::cout;
 using std::endl;
@@ -148,7 +143,7 @@ int main(int argc, char *argv[]){
 
 	if(argc != 2){
 		cout << "Wrong Format" << endl; 
-		cout << "Correct Format: concurrency <num threads>" << endl;
+		cout << "Correct Format: part1 <num threads>" << endl;
 	}
 	else{
 		int numThreads = atoi(argv[1]);
