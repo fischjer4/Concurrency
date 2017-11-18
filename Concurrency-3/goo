@@ -1,5 +1,5 @@
 make clean;
-make all;
 clear;
+make all;
 echo "To run part 1, type ./part1 <num threads>"
 echo "To run part 2, type ./part2 <num threads>"
