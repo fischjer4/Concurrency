@@ -1,3 +1,4 @@
 make clean;
 make;
 clear;
+echo "To run type ./concurrency <num threads>"
