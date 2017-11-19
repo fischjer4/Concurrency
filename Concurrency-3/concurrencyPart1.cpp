@@ -8,13 +8,11 @@
 #include <semaphore.h>
 #include <unistd.h>
 
-
 #define MAX_PROCESSES 3
 
 using std::cout;
 using std::endl;
 using std::string;
-
 
 struct IndvThread{
 	int threadNum;
@@ -43,7 +41,8 @@ void* printAll(void* num){
 			for(int i = 0; i < numWorkers; i++){
 		    	pthread_mutex_lock(&printer);
 					if(workers[i].action == "working"){
-						cout << "Thread " << i << " is working for "<< workers[i].workWaitTime << "..." << endl;
+						cout << "Thread " << i << " is working for " << workers[i].workWaitTime << "..." << endl;
+                        workers[i].workWaitTime--;
 					}
 					else{
 						cout << "Thread " << i << " is " << workers[i].action << "..." << endl;
@@ -63,6 +62,7 @@ void* printAll(void* num){
 */
 void* begin(void *worker){
     struct IndvThread* curWorker = (struct IndvThread*)worker;
+    int waitTime = 0;
 	while(true){
 		/* if thread needs to wait till all keys are returned, then wait */
 		if(stop){
@@ -80,8 +80,9 @@ void* begin(void *worker){
 				stop = 1;
 			}
 			curWorker->action = "working";
-			curWorker->workWaitTime = rand() % 13 + 1;
-			sleep(curWorker->workWaitTime);
+			waitTime = rand() % 13 + 1;
+            curWorker->workWaitTime = waitTime;
+			sleep(waitTime);
 			curWorker->action = "waiting";
 		sem_post(&keyHolder);
 		
