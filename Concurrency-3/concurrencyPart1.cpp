@@ -37,19 +37,18 @@ void* printAll(void* num){
 		while(true){
 		    pthread_mutex_lock(&printer);
 				cout << "Keys open: " << keysOpen << endl;
-		    pthread_mutex_unlock(&printer);
-			for(int i = 0; i < numWorkers; i++){
-		    	pthread_mutex_lock(&printer);
-					if(workers[i].action == "working"){
-						cout << "Thread " << i << " is working for " << workers[i].workWaitTime << "..." << endl;
-                        workers[i].workWaitTime--;
-					}
-					else{
-						cout << "Thread " << i << " is " << workers[i].action << "..." << endl;
-					}
-		    	pthread_mutex_unlock(&printer);
-			}
-			cout << endl;
+				for(int i = 0; i < numWorkers; i++){
+						if(workers[i].action == "working"){
+							cout << "Thread " << i << " is working for " << workers[i].workWaitTime << "..." << endl;
+							workers[i].workWaitTime--;
+						}
+						else{
+							cout << "Thread " << i << " is " << workers[i].action << "..." << endl;
+						}
+				}
+				cout << endl;
+			pthread_mutex_unlock(&printer);
+			
 			/* Print every 1 second */
 			sleep(1);
 		}
@@ -62,7 +61,7 @@ void* printAll(void* num){
 */
 void* begin(void *worker){
     struct IndvThread* curWorker = (struct IndvThread*)worker;
-    int waitTime = 0;
+	
 	while(true){
 		/* if thread needs to wait till all keys are returned, then wait */
 		if(stop){
@@ -80,9 +79,8 @@ void* begin(void *worker){
 				stop = 1;
 			}
 			curWorker->action = "working";
-			waitTime = rand() % 13 + 1;
-            curWorker->workWaitTime = waitTime;
-			sleep(waitTime);
+            curWorker->workWaitTime = rand() % 13 + 1;
+			sleep(curWorker->workWaitTime);
 			curWorker->action = "waiting";
 		sem_post(&keyHolder);
 		
