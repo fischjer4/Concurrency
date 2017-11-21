@@ -1,5 +1,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 *
+*
+*	* The function pthread_mutex_trylock(&mutex) returns 0 
+*		if mutex is acquired. Otherwise, an error number is returned 
+*		to indicate the error.
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <iostream>
@@ -21,71 +25,103 @@ struct IndvThread{
 };
 
 pthread_mutex_t printer;
-pthread_mutex_t search_access;
-pthread_mutex_t insert_access;
-pthread_mutex_t delete_access;
-pthread_mutex_t empty;
+pthread_mutex_t searchLock;
+pthread_mutex_t insertLock;
+pthread_mutex_t deleteLock;
+
 struct IndvThread* searchers = NULL;
 struct IndvThread* inserters = NULL;
 struct IndvThread* deleters = NULL;
+
+pthread_t *searchThreads = NULL;
 pthread_t *insertThreads = NULL;
 pthread_t *deleteThreads = NULL;
-pthread_t *searchThreads = NULL;
 pthread_t printerThread;
+
 list<int> lst; /* The shared resource */
-int numThreads = 0;
-list<int>::iterator it;
+
+
 
 /**********************************************************************
 					  Main Functions Per Thread Type 
 **********************************************************************/
 
 /*
-	* The Main function for inerter threads
+	* The Main function for searcher threads
 */
-void* insertFunc(void *worker)
-{
-    //struct IndvThread *curInserter= (struct IndvThread *)worker;
-    int val;
+void* searchFunc(void* worker){
+    struct IndvThread* curSearcher = (struct IndvThread *)worker;
+
 	while(true){
-        sleep(2);
-        pthread_mutex_lock(&search_access);
-        pthread_mutex_lock(&insert_access);
-        pthread_mutex_lock(&delete_access);
-        val = rand() % 100 + 1;
-        lst.push_back(val);
-        pthread_mutex_unlock(&delete_access);
-        pthread_mutex_unlock(&insert_access);
-        pthread_mutex_unlock(&search_access);
+		if(lst.size() < 15){
+			/*if a deleter hasnt locked this lock, then search */ 
+			if(!pthread_mutex_trylock(&searchLock)){
+				pthread_mutex_unlock(&searchLock);
+
+				/*print entire list*/
+				pthread_mutex_lock(&printer);
+					cout << curSearcher->threadType << " " << curSearcher->threadNum << ": ";
+					for(list<int>::iterator it = lst.begin(); it != lst.end(); it++){
+						cout << *it << " ";
+					}
+					cout << endl << endl;
+				pthread_mutex_unlock(&printer);
+				sleep(1);
+			}
+		}
 	}
     return NULL;
 }
 /*
-	* The Main function for searcher threads
+	* The Main function for inerter threads
 */
-void *searchFunc(void *worker)
-{
-    //struct IndvThread *curSearcher= (struct IndvThread *)worker;
+void* insertFunc(void* worker){
+    struct IndvThread* curInserter = (struct IndvThread *)worker;
+
 	while(true){
-        ++it;
+        if(lst.size() < 15){
+			/*grabbing insertLock stops inserters and deleters*/
+			if(pthread_mutex_trylock(&insertLock)){
+				int val = rand() % 13 + 1;
+				pthread_mutex_lock(&printer);
+					cout << curInserter->threadType << " " << curInserter->threadNum
+						<< " is inserting: " << val << endl;
+				pthread_mutex_unlock(&printer);
+				lst.push_back(val);
+				pthread_mutex_unlock(&insertLock);
+				sleep(1);
+			}
+		}
 	}
     return NULL;
 }
 /*
 	* The Main function for deleter threads
+	* Note there is no deleteLock used here,
+		That is because the delete threads will already get queued up 
+		on the pthread_mutex_trylock(&insertLock)
 */
-void *deleteFunc(void *worker)
-{
-    //struct IndvThread *curDeleter= (struct IndvThread *)worker;
+void* deleteFunc(void* worker){
+    struct IndvThread* curDeleter= (struct IndvThread *)worker;
+
 	while(true){
-        sleep(2);
-        pthread_mutex_lock(&search_access);
-        pthread_mutex_lock(&insert_access);
-        pthread_mutex_lock(&delete_access);
-        lst.pop_front();
-        pthread_mutex_unlock(&delete_access);
-        pthread_mutex_unlock(&insert_access);
-        pthread_mutex_unlock(&search_access);
+		if(!lst.size()){
+			/*If an inserter is running, don't delete, wait till you can claim lock*/
+			if(pthread_mutex_trylock(&insertLock)){
+				/*If a searcher is running, don't delete, wait till you can claim lock*/
+				if(pthread_mutex_trylock(&searchLock)){
+					pthread_mutex_lock(&printer);
+						cout << curDeleter->threadType << " " << curDeleter->threadNum
+							<< " deleted: " << *lst.begin() << endl;
+	
+					pthread_mutex_unlock(&printer);
+					lst.pop_front();
+					pthread_mutex_unlock(&searchLock);
+				}
+				pthread_mutex_unlock(&insertLock);
+				sleep(1);
+			}
+		}
 	}
     return NULL;
 }
@@ -98,38 +134,34 @@ void *deleteFunc(void *worker)
 /*
 	* Set up the workers
 */
-void initThreads(struct IndvThread workers[], const int &numThreads, const string &type)
-{
+void nameWorkers(struct IndvThread workers[], const int &numThreads, const string &type){
 	for(int i = 0; i < numThreads; i++){
 		workers[i].threadNum = i;
 		workers[i].threadType = type;
 	}
 }
 
-void initWorkers(const int &numThreads)
-{
-	inserters = new struct IndvThread[numThreads];
+void initWorkers(const int &numThreads){
 	searchers = new struct IndvThread[numThreads];
+	inserters = new struct IndvThread[numThreads];
 	deleters = new struct IndvThread[numThreads];
 
+	searchThreads = new pthread_t[numThreads];
 	insertThreads = new pthread_t[numThreads];
 	deleteThreads = new pthread_t[numThreads];
-	searchThreads = new pthread_t[numThreads];
 
-	initThreads(inserters, numThreads, string("Inserter"));
-	initThreads(searchers, numThreads, string("Searcher"));
-	initThreads(deleters, numThreads, string("Deleter"));
+	nameWorkers(searchers, numThreads, string("searcher"));
+	nameWorkers(inserters, numThreads, string("inserter"));
+	nameWorkers(deleters,  numThreads, string("deleter"));
 }
 /*
 	* Sets up the semaphore an mutexes
 */
-void initLocks()
-{
-    pthread_mutex_init(&search_access, NULL);
-    pthread_mutex_init(&insert_access, NULL);
-    pthread_mutex_init(&delete_access, NULL);
+void initLocks(){
+    pthread_mutex_init(&searchLock, NULL);
+    pthread_mutex_init(&insertLock, NULL);
+    pthread_mutex_init(&deleteLock, NULL);
     pthread_mutex_init(&printer, NULL);
-    pthread_mutex_init(&empty, NULL);
 }
 
 
@@ -140,8 +172,7 @@ void initLocks()
 /*
 	* Joins all running threads
 */
-void joinThreads(pthread_t threads[], const int &numThreads)
-{
+void joinThreads(pthread_t threads[], const int &numThreads){
 	for(int i = 0; i < numThreads; i++){
 		pthread_join(threads[i], NULL);
 	}
@@ -149,8 +180,7 @@ void joinThreads(pthread_t threads[], const int &numThreads)
 /*
 	* Join up all threads
 */
-void joinAll(const int &numThreads)
-{
+void joinAll(const int &numThreads){
 	joinThreads(insertThreads, numThreads);
 	joinThreads(searchThreads, numThreads);
 	joinThreads(deleteThreads, numThreads);
@@ -159,8 +189,7 @@ void joinAll(const int &numThreads)
 /*
 	* Frees all allocated memory
 */
-void freeMemory(pthread_t threads[], struct IndvThread workers[])
-{
+void freeMemory(pthread_t threads[], struct IndvThread workers[]){
 	if(threads != NULL)
 		delete [] threads;
 	if(workers != NULL)		
@@ -169,8 +198,7 @@ void freeMemory(pthread_t threads[], struct IndvThread workers[])
 /*
 	* Free all allocated memory
 */
-void freeAll()
-{
+void freeAll(){
 	freeMemory(insertThreads, inserters);
 	freeMemory(searchThreads, searchers);
 	freeMemory(deleteThreads, deleters);
@@ -203,31 +231,22 @@ void startThreads(pthread_t threads[], struct IndvThread workers[],
 /*
 	* Main function
 */
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv){
     
-    int val;
     srand( time(NULL) );
 
-	if(argc != 2) {
+	if(argc != 2){
 		cout << "Wrong Format" << endl; 
 		cout << "Correct Format: part2 <num threads per type>" << endl;
 	}
-	else {
-		numThreads = atoi(argv[1]);
+	else{
+		int numThreads = atoi(argv[1]);
 		if(numThreads < 1){
 			cout << "Please allow at least one thread per type" << endl;
 		}
 		else{
 			/* Inititlize Lock Constructs */
     		initLocks();
-            
-            /* Put something in the list so the iterator can be properly initiated */
-            val = rand() % 100 + 1;
-            lst.push_back(val);
-            
-            /* Initiate iterator */
-            it = lst.begin();
             
 			/* Set up structures */
 			initWorkers(numThreads);
@@ -239,7 +258,7 @@ int main(int argc, char **argv)
 
 			/* Clean everything up */
 			joinAll(numThreads);
-			freeAll();
+			// freeAll();
 		}
 	}
 
