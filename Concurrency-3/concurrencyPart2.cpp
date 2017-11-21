@@ -55,9 +55,7 @@ void* searchFunc(void* worker){
 	while(true){
 		if(lst.size() < 15){
 			/*if a deleter hasnt locked this lock, then search */ 
-			if(!pthread_mutex_trylock(&searchLock)){
-				pthread_mutex_unlock(&searchLock);
-
+			if(pthread_mutex_trylock(&searchLock)){
 				/*print entire list*/
 				pthread_mutex_lock(&printer);
 					cout << curSearcher->threadType << " " << curSearcher->threadNum << ": ";
@@ -66,6 +64,7 @@ void* searchFunc(void* worker){
 					}
 					cout << endl << endl;
 				pthread_mutex_unlock(&printer);
+				pthread_mutex_unlock(&searchLock);
 				sleep(1);
 			}
 		}
@@ -105,23 +104,21 @@ void* deleteFunc(void* worker){
     struct IndvThread* curDeleter= (struct IndvThread *)worker;
 
 	while(true){
-		if(!lst.size()){
 			/*If an inserter is running, don't delete, wait till you can claim lock*/
-			if(pthread_mutex_trylock(&insertLock)){
+			pthread_mutex_lock(&insertLock);
 				/*If a searcher is running, don't delete, wait till you can claim lock*/
-				if(pthread_mutex_trylock(&searchLock)){
-					pthread_mutex_lock(&printer);
-						cout << curDeleter->threadType << " " << curDeleter->threadNum
-							<< " deleted: " << *lst.begin() << endl;
-	
-					pthread_mutex_unlock(&printer);
-					lst.pop_front();
-					pthread_mutex_unlock(&searchLock);
-				}
-				pthread_mutex_unlock(&insertLock);
-				sleep(1);
-			}
-		}
+				pthread_mutex_lock(&searchLock);
+					if(lst.size() > 1){
+						int front = *lst.begin();
+						lst.pop_front();
+						pthread_mutex_lock(&printer);
+							cout << curDeleter->threadType << " " << curDeleter->threadNum
+								<< " deleted: " << front << endl;
+						pthread_mutex_unlock(&printer);
+					}
+				pthread_mutex_unlock(&searchLock);
+			pthread_mutex_unlock(&insertLock);
+			sleep(1);
 	}
     return NULL;
 }
@@ -255,10 +252,10 @@ int main(int argc, char **argv){
 			startThreads(insertThreads, inserters, numThreads, &insertFunc);
 			startThreads(searchThreads, searchers, numThreads, &searchFunc);
 			startThreads(deleteThreads, deleters, numThreads, &deleteFunc);
-
+			
 			/* Clean everything up */
 			joinAll(numThreads);
-			// freeAll();
+			freeAll();
 		}
 	}
 
