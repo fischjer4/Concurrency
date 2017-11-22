@@ -1,2 +1,56 @@
-NOTE: sem_init is deprecated on MacOS. As in, this program won't operate correctly on a Mac due to the semaphore not being initialized.To run our program type ./goo (you may have to chmod +x goo) • This is a script that calls	• make clean	• make,	• clear	• ./concurrencyGame Plan	• Let the chopsticks be an array of mutexes	• Let there be a semaphore only allowing four philosophers to eat at a time	• The ith Philosopher thinks	• When the ith philosopher wants to eat and there is space (i.e. semaphore	  allows)		- Wait for chopstick[i]		- Wait for chopstick[ (i+1) % 5] 
-		- Eat		- When done eating			* Signal chopstick[i]			* Signal chopstick [ (i+1 ) % 5]	• The ith Philosopher thinksYou can see that our solution works by viewing the programs output (the table). A philosopher will have a ? next to their name if they're thinking. A philosopher will have a \/ next to their name if they're eating. You can see that no two adjacent philosophers are eating.
+NOTE: sem_init is deprecated on MacOS. As in, this program won't operate 
+      correctly on a Mac due to the semaphore not being initialized.
+
+- To run our program type ./goo (you may have to chmod +x goo)
+
+- To run part one, type ./part1 <num threads> where <num threads> is 
+  greater than 3 (EX. ./part1 4). This will create and run 4 threads
+
+- To run part two, type ./part2 <num threads> where <num threads> is 
+  greater than 1 (EX. ./part2 3). This will create and run 3 searcher threads,
+  3 inserter threads, and 3 deleter threads.
+
+
+Part 1 Game Plan:
+	- Printer thread prints what each thread is doing every 1 second
+	- Let the semaphore have 3 'keys'
+	- If there is a key and stop is not turned on, grab it
+		- Check if it was the last key
+			- If yes, set stop variable which forces non-working
+		          threads to wait until all keys are back
+		- When thread is done working
+			- If all the keys are back
+				- Let all threads free to continue (broadcast to lock)
+	- Sleep for random number between 1 and 8 seconds.
+	  This sleep is here to prove that a thread can grab a key and work
+ 	  freely if not all keys are already taken
+
+- To see that Part 1 is correct, simply run the program and see
+  that when 'Keys Locked Out' is printed, all working threads
+  finish before new one begin working.
+  And, when 'Keys open: " is printed, threads can grab keys
+  and work freely.
+
+
+Part 2 Game Plan:
+	Search Func:
+		- If a deleter thread isn't working
+			○ Lock deleters out
+			○ Then search (aka: print list)
+	Insert Func:
+		- If a deleter isn't working
+			○ Lock deleters out (which also locks out other inserters)
+			○ Then insert
+	Delete Func:
+		- If a inserter thread isn't working
+			○ Lock out inserters (which also locks out other deleters)
+			○ If a searcher thread isn't working
+				+ Lock out searchers
+				+ Then delete
+
+- To see that part2 is correct, run the program and see that
+	1) There are no runtime errors. These would occur if the constraints
+	   weren't held.
+	2) The searcher threads print the list, and one can see that the printed list
+	   is alwasy consistent with the previous insert and delete outputs. This means
+	   that the threads operations are abiding by the constraints.

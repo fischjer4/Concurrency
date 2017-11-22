@@ -1,10 +1,23 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-*
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+*	Search Func:
+*		- If a deleter thread isn't working
+*			○ Lock deleters out
+*			○ Then search (aka: print list)
+*	Insert Func:
+*		- If a deleter isn't working
+*			○ Lock deleters out (which also locks inserters)
+*			○ Then insert
+*	Delete Func:
+*		- If a inserter thread isn't working
+*			○ Lock out inserters (which also locks deleters)
+*			○ If a searcher thread isn't working
+*				+ Lock out searchers
+*				+ Then delete
 *
 *	* The function pthread_mutex_trylock(&mutex) returns 0 
 *		if mutex is acquired. Otherwise, an error number is returned 
 *		to indicate the error.
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <iostream>
 #include <pthread.h>
