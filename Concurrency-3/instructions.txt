@@ -52,5 +52,5 @@ Part 2 Game Plan:
 	1) There are no runtime errors. These would occur if the constraints
 	   weren't held.
 	2) The searcher threads print the list, and one can see that the printed list
-	   is alwasy consistent with the previous insert and delete outputs. This means
+	   is always consistent with the previous insert and delete outputs. This means
 	   that the threads operations are abiding by the constraints.
