@@ -45,6 +45,7 @@ pthread_mutex_t searchWait;
 
 pthread_cond_t searchRunning;
 static int stop = 0;
+int numSearchersRunning = 0;
 
 struct IndvThread* searchers = NULL;
 struct IndvThread* inserters = NULL;
@@ -75,6 +76,10 @@ void* searchFunc(void* worker){
 			if(pthread_mutex_trylock(&searchLock)){
                 pthread_mutex_unlock(&searchLock);
                 stop = 1;
+                numSearchersRunning++;
+                /*pthread_mutex_lock(&printer);
+                    cout << "Number of searchers running: " << numSearchersRunning << endl;
+                pthread_mutex_unlock(&printer);*/
 				/*print entire list*/
 				pthread_mutex_lock(&printer);
 					cout << curSearcher->threadType << " " << curSearcher->threadNum << ": ";
@@ -84,6 +89,7 @@ void* searchFunc(void* worker){
 					cout << endl << endl;
 				pthread_mutex_unlock(&printer);
                 pthread_cond_broadcast(&searchRunning);
+                numSearchersRunning--;
                 stop = 0;
                 sleep(1);
 			}
@@ -131,8 +137,6 @@ void* deleteFunc(void* worker){
 			/*If a searcher is running, don't delete, wait till you can claim lock*/
             pthread_mutex_lock(&searchWait);
                 while(stop) {
-                    pthread_mutex_lock(&printer);
-                    pthread_mutex_unlock(&printer);
                     pthread_cond_wait(&searchRunning, &searchWait);
                 }
             pthread_mutex_unlock(&searchWait);
