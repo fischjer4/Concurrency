@@ -76,8 +76,8 @@ void* searchFunc(void* worker){
 			if(pthread_mutex_trylock(&searchLock)){
                 pthread_mutex_unlock(&searchLock);
                 stop = 1;
-                numSearchersRunning++;
-                /*pthread_mutex_lock(&printer);
+                /*numSearchersRunning++;
+                pthread_mutex_lock(&printer);
                     cout << "Number of searchers running: " << numSearchersRunning << endl;
                 pthread_mutex_unlock(&printer);*/
 				/*print entire list*/
@@ -89,9 +89,9 @@ void* searchFunc(void* worker){
 					cout << endl << endl;
 				pthread_mutex_unlock(&printer);
                 pthread_cond_broadcast(&searchRunning);
-                numSearchersRunning--;
+                //numSearchersRunning--;
                 stop = 0;
-                sleep(1);
+                usleep(500000);
 			}
 		}
 	}
@@ -115,7 +115,7 @@ void* insertFunc(void* worker){
 				pthread_mutex_unlock(&printer);
 				lst.push_back(val);
 				pthread_mutex_unlock(&insertLock);
-				sleep(1);
+                usleep(500000);
 			}
 		}
 	}
@@ -151,7 +151,7 @@ void* deleteFunc(void* worker){
 				}
 			pthread_mutex_unlock(&searchLock);
 		pthread_mutex_unlock(&insertLock);
-		sleep(1);
+        usleep(500000);
 	}
     return NULL;
 }
