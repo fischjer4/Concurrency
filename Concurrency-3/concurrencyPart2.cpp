@@ -117,21 +117,21 @@ void* deleteFunc(void* worker){
     struct IndvThread* curDeleter= (struct IndvThread *)worker;
 
 	while(true){
-			/*If an inserter is running, don't delete, wait till you can claim lock*/
-			pthread_mutex_lock(&insertLock);
-				/*If a searcher is running, don't delete, wait till you can claim lock*/
-				pthread_mutex_lock(&searchLock);
-					if(lst.size() > 1){
-						int front = *lst.begin();
-						lst.pop_front();
-						pthread_mutex_lock(&printer);
-							cout << curDeleter->threadType << " " << curDeleter->threadNum
-								<< " deleted: " << front << endl;
-						pthread_mutex_unlock(&printer);
-					}
-				pthread_mutex_unlock(&searchLock);
-			pthread_mutex_unlock(&insertLock);
-			sleep(1);
+		/*If an inserter is running, don't delete, wait till you can claim lock*/
+		pthread_mutex_lock(&insertLock);
+			/*If a searcher is running, don't delete, wait till you can claim lock*/
+			pthread_mutex_lock(&searchLock);
+				if(lst.size() > 1){
+					int front = *lst.begin();
+					lst.pop_front();
+					pthread_mutex_lock(&printer);
+						cout << curDeleter->threadType << " " << curDeleter->threadNum
+							<< " deleted: " << front << endl;
+					pthread_mutex_unlock(&printer);
+				}
+			pthread_mutex_unlock(&searchLock);
+		pthread_mutex_unlock(&insertLock);
+		sleep(1);
 	}
     return NULL;
 }
