@@ -79,7 +79,7 @@ void* searchFunc(void* worker){
 				pthread_mutex_unlock(&printer);
 				pthread_mutex_unlock(&searchLock);
 				sleep(1);
-			}
+			} 
 		}
 	}
     return NULL;
