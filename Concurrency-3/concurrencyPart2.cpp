@@ -41,11 +41,8 @@ pthread_mutex_t printer;
 pthread_mutex_t searchLock;
 pthread_mutex_t insertLock;
 pthread_mutex_t deleteLock;
-pthread_mutex_t searchWait;
 
-pthread_cond_t searchRunning;
-static int stop = 0;
-int numSearchersRunning = 0;
+static int numSearchersRunning = 0;
 
 struct IndvThread* searchers = NULL;
 struct IndvThread* inserters = NULL;
@@ -74,13 +71,11 @@ void* searchFunc(void* worker){
 		if(lst.size() < 15){
 			/*if a deleter hasnt locked this lock, then search */ 
 			if(pthread_mutex_trylock(&searchLock)){
-                pthread_mutex_unlock(&searchLock);
-                stop = 1;
-                /*numSearchersRunning++;
-                pthread_mutex_lock(&printer);
-                    cout << "Number of searchers running: " << numSearchersRunning << endl;
-                pthread_mutex_unlock(&printer);*/
-				/*print entire list*/
+				/*increment numSearchersRunning so deleters don't run*/
+                numSearchersRunning++;
+				/*unlock right away to allow other searchers*/
+                pthread_mutex_unlock(&searchLock); 
+				
 				pthread_mutex_lock(&printer);
 					cout << curSearcher->threadType << " " << curSearcher->threadNum << ": ";
 					for(list<int>::iterator it = lst.begin(); it != lst.end(); it++){
@@ -88,10 +83,8 @@ void* searchFunc(void* worker){
 					}
 					cout << endl << endl;
 				pthread_mutex_unlock(&printer);
-                pthread_cond_broadcast(&searchRunning);
-                //numSearchersRunning--;
-                stop = 0;
-                usleep(500000);
+                numSearchersRunning--;
+                sleep(1);
 			}
 		}
 	}
@@ -115,7 +108,7 @@ void* insertFunc(void* worker){
 				pthread_mutex_unlock(&printer);
 				lst.push_back(val);
 				pthread_mutex_unlock(&insertLock);
-                usleep(500000);
+                sleep(1);
 			}
 		}
 	}
@@ -135,12 +128,11 @@ void* deleteFunc(void* worker){
 		/*If an inserter is running, don't delete, wait till you can claim lock*/
 		pthread_mutex_lock(&insertLock);
 			/*If a searcher is running, don't delete, wait till you can claim lock*/
-            pthread_mutex_lock(&searchWait);
-                while(stop) {
-                    pthread_cond_wait(&searchRunning, &searchWait);
-                }
-            pthread_mutex_unlock(&searchWait);
 			pthread_mutex_lock(&searchLock);
+				/*check to make sure there isn't a searcher finishing up work
+					since they unlock right after claiming
+				*/
+				while(numSearchersRunning){}
 				if(lst.size() > 1){
 					int front = *lst.begin();
 					lst.pop_front();
@@ -151,7 +143,7 @@ void* deleteFunc(void* worker){
 				}
 			pthread_mutex_unlock(&searchLock);
 		pthread_mutex_unlock(&insertLock);
-        usleep(500000);
+        sleep(1);
 	}
     return NULL;
 }
@@ -193,8 +185,6 @@ void initLocks(){
     pthread_mutex_init(&insertLock, NULL);
     pthread_mutex_init(&deleteLock, NULL);
     pthread_mutex_init(&printer, NULL);
-    pthread_mutex_init(&searchWait, NULL);
-    pthread_cond_init(&searchRunning, NULL);
 }
 
 
