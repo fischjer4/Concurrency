@@ -98,7 +98,7 @@ void initWorkers(const int &numThreads){
 	* Sets up the semaphore an mutexes
 */
 void initLocks(){
-	sem_init(&keyHolder, 0, 3);
+    pthread_mutex_init(&accessor, NULL);
     pthread_mutex_init(&printer, NULL);
 }
 
@@ -149,7 +149,7 @@ void startThreads(pthread_t threads[], struct IndvThread workers[],
 		if( pthread_create(&threads[i], NULL, *funcPtr, (void*)&workers[i]) < 0 ){
 			pthread_mutex_lock(&printer);
 				cout << "Error: "
-					<< workers[i].type << " "
+					<< workers[i].threadType << " "
 					<< workers[i].threadNum
 					<< " thread could not be initialised ... exiting now"
 					<< endl;
