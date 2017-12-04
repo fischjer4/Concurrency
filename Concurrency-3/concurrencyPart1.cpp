@@ -1,5 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-*
+*	Idea:
+*		- Printer thread prints what each thread is doing every 1 second
+*		- Let the semaphore have 3 'keys'
+*		- If there is a key and stop is not turned on, grab it
+*			- Check if it was the last key
+*				- If yes, set stop variable which forces non-working
+*					threads to wait until all keys are back
+*		- When thread is done working
+*			- If all the keys are back
+*				- Let all threads free to continue (broadcast to lock)
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <iostream>
@@ -8,13 +17,11 @@
 #include <semaphore.h>
 #include <unistd.h>
 
-
 #define MAX_PROCESSES 3
 
 using std::cout;
 using std::endl;
 using std::string;
-
 
 struct IndvThread{
 	int threadNum;
@@ -38,19 +45,24 @@ void* printAll(void* num){
 	if(workers != NULL){
 		while(true){
 		    pthread_mutex_lock(&printer);
-				cout << "Keys open: " << keysOpen << endl;
-		    pthread_mutex_unlock(&printer);
-			for(int i = 0; i < numWorkers; i++){
-		    	pthread_mutex_lock(&printer);
-					if(workers[i].action == "working"){
-						cout << "Thread " << i << " is working for "<< workers[i].workWaitTime << "..." << endl;
-					}
-					else{
-						cout << "Thread " << i << " is " << workers[i].action << "..." << endl;
-					}
-		    	pthread_mutex_unlock(&printer);
-			}
-			cout << endl;
+				if(!stop){
+					cout << "Keys open: " << keysOpen << endl;
+				}
+				else{
+					cout << "Keys Locked Out" << endl;
+				}
+				for(int i = 0; i < numWorkers; i++){
+						if(workers[i].action == "working"){
+							cout << "Thread " << i << " is working for " << workers[i].workWaitTime << "..." << endl;
+							workers[i].workWaitTime--;
+						}
+						else{
+							cout << "Thread " << i << " is " << workers[i].action << "..." << endl;
+						}
+				}
+				cout << endl;
+			pthread_mutex_unlock(&printer);
+			
 			/* Print every 1 second */
 			sleep(1);
 		}
@@ -63,6 +75,7 @@ void* printAll(void* num){
 */
 void* begin(void *worker){
     struct IndvThread* curWorker = (struct IndvThread*)worker;
+	
 	while(true){
 		/* if thread needs to wait till all keys are returned, then wait */
 		if(stop){
@@ -80,7 +93,7 @@ void* begin(void *worker){
 				stop = 1;
 			}
 			curWorker->action = "working";
-			curWorker->workWaitTime = rand() % 13 + 1;
+            curWorker->workWaitTime = rand() % 13 + 1;
 			sleep(curWorker->workWaitTime);
 			curWorker->action = "waiting";
 		sem_post(&keyHolder);
@@ -91,6 +104,10 @@ void* begin(void *worker){
 			pthread_cond_broadcast(&signalAllKeys);
 			stop = 0;
 		}
+
+		/*this sleep is here to prove that if not all keys are gone, that
+			a thread could grab another key freely */
+		sleep(rand() % 8 + 1);
 	}
     return NULL;
 }

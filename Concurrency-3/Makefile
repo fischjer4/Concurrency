@@ -12,4 +12,4 @@ clean:
 	\rm *.o part1 part2;
 
 tar:
-	tar -cvjf concurrency.tar.bz2 concurrencyPart1.cpp concurrencyPart2.cpp Makefile goo README.md
+	tar -cvjf concurrency.tar.bz2 concurrencyPart1.cpp concurrencyPart2.cpp Makefile goo instructions.txt
